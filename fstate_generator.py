@@ -1,9 +1,9 @@
 import base64
 import datetime as dt
 import json
-import random
+import os
 import re
-from pathlib import Path
+import sys
 
 
 def _generate_fstate_base64(fstate):
@@ -14,7 +14,7 @@ def _generate_fstate_base64(fstate):
 
 def generate_fstate_day(BaoSRQ, ShiFSH, ShiFZX, ddlSheng, ddlShi, ddlXian, XiangXDZ, ShiFZJ,
                         XingCM):
-    with open('fstate_day.json', encoding='utf8') as f:
+    with open(os.path.abspath(os.path.dirname(sys.argv[0])) + '/fstate_day.json', encoding='utf8') as f:
         fstate = json.loads(f.read())
 
     fstate['p1_BaoSRQ']['Text'] = BaoSRQ
@@ -59,7 +59,7 @@ def get_last_report(sess, t):
         try:
             if 'ShiFSH' in h:
                 print('-ShiFSH-')
-                ShiFSH = _html_to_json(htmls[i - 1])['SelectedValue']
+                ShiFSH = _html_to_json(htmls[i - 1])['Text']
                 print(ShiFSH)
             if 'ShiFZX' in h:
                 print('-ShiFZX-')
