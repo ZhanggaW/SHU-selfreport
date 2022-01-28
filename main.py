@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime as dt
 import json
 import os
@@ -12,6 +13,7 @@ import yaml
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -22,7 +24,31 @@ RETRY = 5
 RETRY_TIMEOUT = 120
 
 
-# 获取东八区时间
+class element_has_value():
+    def __init__(self, locator):
+        self.locator = locator
+
+    def __call__(self, driver):
+        element = driver.find_element(*self.locator)   # Finding the referenced element
+        if element.get_attribute('value') != '':
+            return element
+        else:
+            return False
+
+
+class element_has_no_value():
+    def __init__(self, locator):
+        self.locator = locator
+
+    def __call__(self, driver):
+        element = driver.find_element(*self.locator)   # Finding the referenced element
+        if element.get_attribute('value') == '':
+            return element
+        else:
+            return False
+
+
+#获取东八区时间
 def get_time():
     # 获取0时区时间，变换为东八区时间
     # 原因：运行程序的服务器所处时区不确定
@@ -94,9 +120,10 @@ def report_day(browser: webdriver.Chrome,
     print('承诺')
     browser.find_element(By.ID, 'p1_ChengNuo-inputEl-icon').click()
 
-    print('答题')
     checkboxes = browser.find_elements(By.CSS_SELECTOR, '#p1_pnlDangSZS .f-field-checkbox-icon')
-    checkboxes[0].click()
+    if len(checkboxes) > 0:  # 有的人没有答题
+        print('答题')
+        checkboxes[0].click()
 
     print('是否在上海', ShiFSH)
     # 在上海（校内），在上海（不在校内），不在上海
@@ -157,10 +184,14 @@ def report_day(browser: webdriver.Chrome,
             print('未检测到已提交随申码')
             upload = browser.find_element(By.NAME, 'p1$pImages$fileSuiSM')
             upload.send_keys(draw_XingCM(ShouJHM, t))
-            time.sleep(1)
+            WebDriverWait(browser, 10).until(
+                element_has_no_value((By.NAME, 'p1$pImages$fileSuiSM'))
+            )
 
             browser.find_element(By.CSS_SELECTOR, '#p1_pImages_fileSuiSM a.f-btn').click()
-            time.sleep(1)
+            WebDriverWait(browser, 10).until(
+                element_has_value((By.ID, 'p1_pImages_HFimgSuiSM-inputEl'))
+            )
 
             print(SuiSM.get_attribute('value'))
         else:
@@ -176,10 +207,14 @@ def report_day(browser: webdriver.Chrome,
             print('未检测到已提交行程码')
             upload = browser.find_element(By.NAME, 'p1$pImages$fileXingCM')
             upload.send_keys(draw_XingCM(ShouJHM, t))
-            time.sleep(1)
+            WebDriverWait(browser, 10).until(
+                element_has_no_value((By.NAME, 'p1$pImages$fileXingCM'))
+            )
 
             browser.find_element(By.CSS_SELECTOR, '#p1_pImages_fileXingCM a').click()
-            time.sleep(1)
+            WebDriverWait(browser, 10).until(
+                element_has_value((By.ID, 'p1_pImages_HFimgXingCM-inputEl'))
+            )
 
             print(XingCM.get_attribute('value'))
         else:
@@ -260,6 +295,8 @@ if __name__ == "__main__":
 
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument("window-size=428,843")
+        chrome_options.add_argument("--no-sandbox")
 
         s = Service()
         browser = webdriver.Chrome(options=chrome_options, service=s)
@@ -272,6 +309,7 @@ if __name__ == "__main__":
         else:
             print('登录失败')
             failed_users.append(user_abbr)
+            continue
 
         sess = requests.Session()
         for cookie in browser.get_cookies():
